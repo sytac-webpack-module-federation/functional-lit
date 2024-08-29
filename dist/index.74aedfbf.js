@@ -586,42 +586,42 @@ function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
 },{}],"4wXiY":[function(require,module,exports) {
 var _lit = require("lit");
 var _functionalLit = require("./functional-lit");
-const Button = function({ children, initialstate = 0 }) {
-    const [count, setCount] = (0, _functionalLit.useState)(parseInt(initialstate), "test-state");
-    (0, _functionalLit.useStyle)((0, _lit.css)`
-        button {
-            background-color: #4CAF50;
-            border: none;
-            border-radius: 10px;
-            color: white;
-            padding: 15px 32px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-        }
-    `);
-    (0, _functionalLit.useEffect)(()=>{
+const Button = ({ children, initialstate = 0 }, { useState, useEffect, useMemo, useStyle, html, css })=>{
+    const [count, setCount] = useState(parseInt(initialstate));
+    useStyle(css`
+            button {
+                background-color: #4CAF50;
+                border: none;
+                border-radius: 10px;
+                color: white;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+            }
+        `);
+    useEffect(()=>{
         console.log("Button mounted");
         return ()=>{
             console.log("Button unmounted");
         };
     }, []);
-    (0, _functionalLit.useEffect)(()=>{
+    useEffect(()=>{
         console.log("count effect triggered");
     }, [
         count
     ]);
-    const someCalculation = (0, _functionalLit.useMemo)(()=>{
+    const someCalculation = useMemo(()=>{
         const result = count * 2;
         console.log("memo calculation triggered:", result);
         return result;
     }, [
         count
     ]);
-    return (0, _lit.html)`
+    return html`
         <button @click="${()=>setCount(count + 1)}">
             ${children}
             ${count}
@@ -629,11 +629,17 @@ const Button = function({ children, initialstate = 0 }) {
         </button>
     `;
 };
+console.log({
+    Button: Button.toString()
+});
+const NewButton = new Function(`return ${Button.toString()}`)();
+// const LazyButton = lazy();
 const Todo = ()=>{
     const [todos, setTodos] = (0, _functionalLit.useState)([]);
     const [inputValue, setInputValue] = (0, _functionalLit.useState)("");
     const scope = (0, _functionalLit.useScope)({
-        "some-button": Button
+        "some-button": Button,
+        "new-button": NewButton
     });
     (0, _functionalLit.useEffect)(()=>{
         console.log("Todo mounted");
@@ -670,6 +676,7 @@ const Todo = ()=>{
                 Add
             </button>
             <scope-2-some-button initialState="${2}">some button</scope-2-some-button>
+            <scope-2-new-button initialState="${2}">some button</scope-2-new-button>
             <p>
                 Number of todo items: ${numberOfTodoItems}
             </p>
@@ -1417,6 +1424,14 @@ function define({ tag, component: CustomFunctionalComponent }) {
             const result = CustomFunctionalComponent({
                 ...attributes,
                 children: this.innerHTML
+            }, {
+                useState,
+                useEffect,
+                useMemo,
+                useScope,
+                useStyle,
+                html: (0, _lit.html),
+                css: (0, _lit.css)
             });
             // Clear the current instance context
             setCurrentInstance(null);

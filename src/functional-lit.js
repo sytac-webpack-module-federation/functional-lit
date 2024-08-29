@@ -1,4 +1,4 @@
-import { LitElement, unsafeCSS } from "lit";
+import { LitElement, unsafeCSS, html, css } from "lit";
 
 let currentInstance = null;
 
@@ -38,6 +38,14 @@ export function define({ tag, component: CustomFunctionalComponent }) {
             const result = CustomFunctionalComponent({
                 ...attributes,
                 children: this.innerHTML,
+            }, {
+                useState,
+                useEffect,
+                useMemo,
+                useScope,
+                useStyle,
+                html,
+                css,
             });
 
             // Clear the current instance context
