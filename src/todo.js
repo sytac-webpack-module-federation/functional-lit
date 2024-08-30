@@ -1,9 +1,81 @@
-import { html } from "lit";
-import { define, useState, useEffect, useMemo } from "./functional-lit";
+import { html, css } from "lit";
+import { define, useState, useEffect, useMemo, useScope, useStyle, lazy, useLazy, useLazyScope } from "./functional-lit";
+
+export const Button = (
+        { children, initialstate = 0 },
+        {
+            useState,
+            useEffect,
+            useMemo,
+            useStyle,
+            html,
+            css,
+        }
+    ) => {
+        const [count, setCount] = useState(parseInt(initialstate));
+
+        useStyle(css`
+            button {
+                background-color: #4CAF50;
+                border: none;
+                border-radius: 10px;
+                color: white;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+            }
+        `);
+
+        useEffect(() => {
+            console.log("Button mounted");
+            return () => {
+                console.log("Button unmounted");
+            };
+        }, []);
+
+        useEffect(() => {
+            console.log("count effect triggered");
+        }, [count]);
+
+        const someCalculation = useMemo(() => {
+            const result = count * 2;
+            console.log("memo calculation triggered:", result);
+            return result;
+        }, [count]);
+
+        return html`
+        <button @click="${() => setCount(count + 1)}">
+            ${children}
+            ${count}
+            ${someCalculation}
+        </button>
+    `;
+    }
+
+console.log({ Button: Button.toString() });
+const NewButton = new Function(`return ${Button.toString()}`)();
+
+
 
 const Todo = () => {
+    const LazyButton = useLazyScope("lazy-button", new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(Button.toString());
+        }, 2000);
+    }));
+
     const [todos, setTodos] = useState([]);
     const [inputValue, setInputValue] = useState('');
+
+    const scope = useScope({
+        "some-button": Button,
+        "new-button": NewButton,
+        // "lazy-button": LazyButton,
+    })
 
     useEffect(() => {
         console.log("Todo mounted");
@@ -37,6 +109,9 @@ const Todo = () => {
             <button @click="${addTodo}">
                 Add
             </button>
+            <some-button initialState="${2}">some button</some-button>
+            <new-button initialState="${2}">some button</new-button>
+            <lazy-button initialState="${2}">some button</lazy-button>
             <p>
                 Number of todo items: ${numberOfTodoItems}
             </p>

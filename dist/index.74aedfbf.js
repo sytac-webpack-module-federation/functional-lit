@@ -584,11 +584,70 @@ function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
 }
 
 },{}],"4wXiY":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Button", ()=>Button);
 var _lit = require("lit");
 var _functionalLit = require("./functional-lit");
+const Button = ({ children, initialstate = 0 }, { useState, useEffect, useMemo, useStyle, html, css })=>{
+    const [count, setCount] = useState(parseInt(initialstate));
+    useStyle(css`
+            button {
+                background-color: #4CAF50;
+                border: none;
+                border-radius: 10px;
+                color: white;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+            }
+        `);
+    useEffect(()=>{
+        console.log("Button mounted");
+        return ()=>{
+            console.log("Button unmounted");
+        };
+    }, []);
+    useEffect(()=>{
+        console.log("count effect triggered");
+    }, [
+        count
+    ]);
+    const someCalculation = useMemo(()=>{
+        const result = count * 2;
+        console.log("memo calculation triggered:", result);
+        return result;
+    }, [
+        count
+    ]);
+    return html`
+        <button @click="${()=>setCount(count + 1)}">
+            ${children}
+            ${count}
+            ${someCalculation}
+        </button>
+    `;
+};
+console.log({
+    Button: Button.toString()
+});
+const NewButton = new Function(`return ${Button.toString()}`)();
 const Todo = ()=>{
+    const LazyButton = (0, _functionalLit.useLazyScope)("lazy-button", new Promise((resolve)=>{
+        setTimeout(()=>{
+            resolve(Button.toString());
+        }, 2000);
+    }));
     const [todos, setTodos] = (0, _functionalLit.useState)([]);
     const [inputValue, setInputValue] = (0, _functionalLit.useState)("");
+    const scope = (0, _functionalLit.useScope)({
+        "some-button": Button,
+        "new-button": NewButton
+    });
     (0, _functionalLit.useEffect)(()=>{
         console.log("Todo mounted");
         return ()=>{
@@ -623,6 +682,9 @@ const Todo = ()=>{
             <button @click="${addTodo}">
                 Add
             </button>
+            <some-button initialState="${2}">some button</some-button>
+            <new-button initialState="${2}">some button</new-button>
+            <lazy-button initialState="${2}">some button</lazy-button>
             <p>
                 Number of todo items: ${numberOfTodoItems}
             </p>
@@ -644,7 +706,7 @@ const Todo = ()=>{
     component: Todo
 });
 
-},{"lit":"4antt","./functional-lit":"erD49"}],"4antt":[function(require,module,exports) {
+},{"lit":"4antt","./functional-lit":"erD49","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4antt":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _reactiveElement = require("@lit/reactive-element");
@@ -1338,79 +1400,153 @@ parcelHelpers.export(exports, "define", ()=>define);
 parcelHelpers.export(exports, "useState", ()=>useState);
 parcelHelpers.export(exports, "useEffect", ()=>useEffect);
 parcelHelpers.export(exports, "useMemo", ()=>useMemo);
+parcelHelpers.export(exports, "useScope", ()=>useScope);
+parcelHelpers.export(exports, "useStyle", ()=>useStyle);
+parcelHelpers.export(exports, "useLazyScope", ()=>useLazyScope);
 var _lit = require("lit");
-let currentComponent = {};
-let hookIndex = 0;
-function define({ tag, component: CustomFuntionalComponent }) {
+let currentInstance = null;
+function setCurrentInstance(instance) {
+    currentInstance = instance;
+}
+function getCurrentInstance() {
+    if (!currentInstance) throw new Error("Hooks can only be called inside a component.");
+    return currentInstance;
+}
+function define({ tag, component: CustomFunctionalComponent }) {
     class CustomComponent extends (0, _lit.LitElement) {
+        constructor(){
+            super();
+            this.hookIndex = 0;
+            this.hooks = {};
+        }
         render() {
-            // get all attributes
+            // Reset hook index on every render
+            this.hookIndex = 0;
+            // Set the current instance context
+            setCurrentInstance(this);
+            // Get all attributes as props
             const attributes = Array.from(this.attributes).reduce((acc, attr)=>{
                 acc[attr.name] = attr.value;
                 return acc;
             }, {});
-            const functionalComponent = ()=>CustomFuntionalComponent({
-                    ...attributes,
-                    children: this.innerHTML
-                });
-            currentComponent = this;
-            hookIndex = 0;
-            return functionalComponent();
+            // Call the functional component
+            const result = CustomFunctionalComponent({
+                ...attributes,
+                children: this.innerHTML
+            }, {
+                useState,
+                useEffect,
+                useMemo,
+                useScope,
+                useStyle,
+                html: (0, _lit.html),
+                css: (0, _lit.css)
+            });
+            // Clear the current instance context
+            setCurrentInstance(null);
+            return result;
         }
     }
     window.customElements.define(tag, CustomComponent);
 }
 function useState(initialState) {
-    // Define a unique property name for each state variable
-    const propName = `hook-${hookIndex++}`;
-    currentComponent[propName] = currentComponent[propName] ?? initialState;
+    const component = getCurrentInstance();
+    const hookIndex = component.hookIndex++;
+    const hookName = `hook-${hookIndex}`;
+    if (!component.hooks[hookName]) component.hooks[hookName] = initialState;
     const setState = (newState)=>{
-        const currentValue = currentComponent[propName];
-        const newValue = typeof newState === "function" ? newState(currentValue) : newState;
-        currentComponent[propName] = newValue;
-        currentComponent.requestUpdate();
+        const value = typeof newState === "function" ? newState(component.hooks[hookName]) : newState;
+        component.hooks[hookName] = value;
+        component.requestUpdate();
     };
     return [
-        currentComponent[propName],
+        component.hooks[hookName],
         setState
     ];
 }
-function useEffect(effectCallback, dependencies) {
-    const effectPropName = `hook-${hookIndex++}`;
-    // Initialize or update the dependencies property
-    const hasChangedDependencies = currentComponent[effectPropName] ? !dependencies.every((dep, i)=>dep === currentComponent[effectPropName].dependencies[i]) : true;
-    if (hasChangedDependencies) {
-        // Update dependencies
-        currentComponent[effectPropName] = {
+function useEffect(effect, dependencies) {
+    const component = getCurrentInstance();
+    const hookIndex = component.hookIndex++;
+    const hookName = `hook-${hookIndex}`;
+    const prevDeps = component.hooks[hookName]?.dependencies;
+    const hasChanged = !prevDeps || dependencies.some((dep, i)=>dep !== prevDeps[i]);
+    if (hasChanged) {
+        if (component.hooks[hookName]?.cleanup) component.hooks[hookName].cleanup();
+        const cleanup = effect();
+        component.hooks[hookName] = {
             dependencies,
-            cleanup: undefined
+            cleanup
         };
-        // Call the effect callback and store any cleanup function
-        const cleanup = effectCallback();
-        if (typeof cleanup === "function") currentComponent[effectPropName].cleanup = cleanup;
     }
-    // Integrate with LitElement lifecycle for cleanup
-    currentComponent.addController({
+    component.addController({
         hostDisconnected () {
-            if (currentComponent[effectPropName]?.cleanup) currentComponent[effectPropName].cleanup();
+            if (component.hooks[hookName]?.cleanup) component.hooks[hookName].cleanup();
         }
     });
 }
 function useMemo(calculation, dependencies) {
-    const memoPropName = `hook-${hookIndex++}`;
-    // Check if the memoized value and dependencies exist
-    if (!currentComponent[memoPropName]) currentComponent[memoPropName] = {
-        dependencies: [],
-        value: undefined
+    const component = getCurrentInstance();
+    const hookIndex = component.hookIndex++;
+    const hookName = `hook-${hookIndex}`;
+    const prevDeps = component.hooks[hookName]?.dependencies;
+    const hasChanged = !prevDeps || dependencies.some((dep, i)=>dep !== prevDeps[i]);
+    if (hasChanged) component.hooks[hookName] = {
+        value: calculation(),
+        dependencies
     };
-    const hasChangedDependencies = !dependencies.every((dep, index)=>dep === currentComponent[memoPropName].dependencies[index]);
-    // If dependencies have changed or this is the first run, recalculate the memoized value
-    if (hasChangedDependencies) {
-        currentComponent[memoPropName].value = calculation();
-        currentComponent[memoPropName].dependencies = dependencies;
-    }
-    return currentComponent[memoPropName].value;
+    return component.hooks[hookName].value;
 }
+function useScope(elements) {
+    const component = getCurrentInstance(); // Get the current component instance
+    const scopeId = `scope-${component.hookIndex++}`; // Generate a unique scope ID
+    console.log({
+        scopeId
+    });
+    const scopedElements = {}; // Create a new object to hold scoped elements
+    Object.keys(elements).forEach((key)=>{
+        const elementTag = `${key}`;
+        const elementClass = elements[key];
+        // Define the custom element with a unique tag per component instance
+        if (!customElements.get(elementTag)) define({
+            tag: elementTag,
+            component: elementClass
+        });
+        // Store the scoped tag in the new object
+        scopedElements[key] = elementTag;
+    });
+    // Store the scoped elements in the component instance
+    component[scopeId] = scopedElements;
+    // Return the scoped elements
+    return component[scopeId];
+}
+function useStyle(styles) {
+    const component = getCurrentInstance(); // Get the current component instance
+    // Store the styles on the component instance to ensure they are only applied once
+    if (!component._stylesApplied) {
+        component._stylesApplied = true;
+        // Apply the styles to the component
+        const styleElement = document.createElement("style");
+        styleElement.textContent = (0, _lit.unsafeCSS)(styles).cssText;
+        component.shadowRoot.appendChild(styleElement);
+    }
+}
+const useLazyScope = (tag, promise)=>{
+    const component = getCurrentInstance();
+    const hookIndex = component.hookIndex++;
+    const scopeId = `scope-${hookIndex}`;
+    promise.then((module)=>{
+        console.log({
+            module
+        });
+        const elementTag = `${tag}`;
+        const elementClass = new Function(`return ${module}`)();
+        if (!customElements.get(elementTag)) define({
+            tag: elementTag,
+            component: elementClass
+        });
+    });
+    return scopeId;
+};
 
 },{"lit":"4antt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["2zBId","4wXiY"], "4wXiY", "parcelRequire367f")
 
