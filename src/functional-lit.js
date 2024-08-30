@@ -123,10 +123,12 @@ export function useScope(elements) {
     const component = getCurrentInstance(); // Get the current component instance
     const scopeId = `scope-${component.hookIndex++}`; // Generate a unique scope ID
 
+    console.log({ scopeId });
+
     const scopedElements = {}; // Create a new object to hold scoped elements
 
     Object.keys(elements).forEach((key) => {
-        const elementTag = `${scopeId}-${key}`;
+        const elementTag = `${key}`;
         const elementClass = elements[key];
 
         // Define the custom element with a unique tag per component instance
@@ -157,4 +159,22 @@ export function useStyle(styles) {
         styleElement.textContent = unsafeCSS(styles).cssText;
         component.shadowRoot.appendChild(styleElement);
     }
+}
+
+export const useLazyScope = (tag, promise) => {
+    const component = getCurrentInstance();
+    const hookIndex = component.hookIndex++;
+    const scopeId = `scope-${hookIndex}`;
+
+    promise.then((module) => {
+        console.log({ module });
+        const elementTag = `${tag}`;
+        const elementClass = new Function(`return ${module}`)();
+
+        if (!customElements.get(elementTag)) {
+            define({ tag: elementTag, component: elementClass });
+        }
+    });
+
+    return scopeId;
 }

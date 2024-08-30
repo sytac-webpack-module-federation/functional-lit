@@ -584,6 +584,9 @@ function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
 }
 
 },{}],"4wXiY":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Button", ()=>Button);
 var _lit = require("lit");
 var _functionalLit = require("./functional-lit");
 const Button = ({ children, initialstate = 0 }, { useState, useEffect, useMemo, useStyle, html, css })=>{
@@ -633,8 +636,12 @@ console.log({
     Button: Button.toString()
 });
 const NewButton = new Function(`return ${Button.toString()}`)();
-// const LazyButton = lazy();
 const Todo = ()=>{
+    const LazyButton = (0, _functionalLit.useLazyScope)("lazy-button", new Promise((resolve)=>{
+        setTimeout(()=>{
+            resolve(Button.toString());
+        }, 2000);
+    }));
     const [todos, setTodos] = (0, _functionalLit.useState)([]);
     const [inputValue, setInputValue] = (0, _functionalLit.useState)("");
     const scope = (0, _functionalLit.useScope)({
@@ -675,8 +682,9 @@ const Todo = ()=>{
             <button @click="${addTodo}">
                 Add
             </button>
-            <scope-2-some-button initialState="${2}">some button</scope-2-some-button>
-            <scope-2-new-button initialState="${2}">some button</scope-2-new-button>
+            <some-button initialState="${2}">some button</some-button>
+            <new-button initialState="${2}">some button</new-button>
+            <lazy-button initialState="${2}">some button</lazy-button>
             <p>
                 Number of todo items: ${numberOfTodoItems}
             </p>
@@ -698,7 +706,7 @@ const Todo = ()=>{
     component: Todo
 });
 
-},{"lit":"4antt","./functional-lit":"erD49"}],"4antt":[function(require,module,exports) {
+},{"lit":"4antt","./functional-lit":"erD49","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4antt":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _reactiveElement = require("@lit/reactive-element");
@@ -1394,6 +1402,7 @@ parcelHelpers.export(exports, "useEffect", ()=>useEffect);
 parcelHelpers.export(exports, "useMemo", ()=>useMemo);
 parcelHelpers.export(exports, "useScope", ()=>useScope);
 parcelHelpers.export(exports, "useStyle", ()=>useStyle);
+parcelHelpers.export(exports, "useLazyScope", ()=>useLazyScope);
 var _lit = require("lit");
 let currentInstance = null;
 function setCurrentInstance(instance) {
@@ -1490,9 +1499,12 @@ function useMemo(calculation, dependencies) {
 function useScope(elements) {
     const component = getCurrentInstance(); // Get the current component instance
     const scopeId = `scope-${component.hookIndex++}`; // Generate a unique scope ID
+    console.log({
+        scopeId
+    });
     const scopedElements = {}; // Create a new object to hold scoped elements
     Object.keys(elements).forEach((key)=>{
-        const elementTag = `${scopeId}-${key}`;
+        const elementTag = `${key}`;
         const elementClass = elements[key];
         // Define the custom element with a unique tag per component instance
         if (!customElements.get(elementTag)) define({
@@ -1518,6 +1530,23 @@ function useStyle(styles) {
         component.shadowRoot.appendChild(styleElement);
     }
 }
+const useLazyScope = (tag, promise)=>{
+    const component = getCurrentInstance();
+    const hookIndex = component.hookIndex++;
+    const scopeId = `scope-${hookIndex}`;
+    promise.then((module)=>{
+        console.log({
+            module
+        });
+        const elementTag = `${tag}`;
+        const elementClass = new Function(`return ${module}`)();
+        if (!customElements.get(elementTag)) define({
+            tag: elementTag,
+            component: elementClass
+        });
+    });
+    return scopeId;
+};
 
 },{"lit":"4antt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["2zBId","4wXiY"], "4wXiY", "parcelRequire367f")
 

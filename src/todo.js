@@ -1,7 +1,7 @@
 import { html, css } from "lit";
-import { define, useState, useEffect, useMemo, useScope, useStyle, lazy } from "./functional-lit";
+import { define, useState, useEffect, useMemo, useScope, useStyle, lazy, useLazy, useLazyScope } from "./functional-lit";
 
-const Button = (
+export const Button = (
         { children, initialstate = 0 },
         {
             useState,
@@ -59,15 +59,22 @@ const Button = (
 console.log({ Button: Button.toString() });
 const NewButton = new Function(`return ${Button.toString()}`)();
 
-// const LazyButton = lazy();
+
 
 const Todo = () => {
+    const LazyButton = useLazyScope("lazy-button", new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(Button.toString());
+        }, 2000);
+    }));
+
     const [todos, setTodos] = useState([]);
     const [inputValue, setInputValue] = useState('');
 
     const scope = useScope({
         "some-button": Button,
-        "new-button": NewButton
+        "new-button": NewButton,
+        // "lazy-button": LazyButton,
     })
 
     useEffect(() => {
@@ -102,8 +109,9 @@ const Todo = () => {
             <button @click="${addTodo}">
                 Add
             </button>
-            <scope-2-some-button initialState="${2}">some button</scope-2-some-button>
-            <scope-2-new-button initialState="${2}">some button</scope-2-new-button>
+            <some-button initialState="${2}">some button</some-button>
+            <new-button initialState="${2}">some button</new-button>
+            <lazy-button initialState="${2}">some button</lazy-button>
             <p>
                 Number of todo items: ${numberOfTodoItems}
             </p>
