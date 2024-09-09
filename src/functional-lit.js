@@ -1,10 +1,15 @@
 import { LitElement } from "lit";
 
 let currentComponent = {};
-let hookIndex = 0;
 
 export function define({ tag, component: CustomFuntionalComponent }) {
     class CustomComponent extends LitElement {
+        constructor() {
+            super();
+            this.hookIndex = 0;
+            this.hooks = {};
+        }
+
         render() {
             // get all attributes
             const attributes = Array.from(this.attributes).reduce((acc, attr) => {
@@ -12,13 +17,13 @@ export function define({ tag, component: CustomFuntionalComponent }) {
                 return acc;
             }, {});
 
+            this.hookIndex = 0;
+            currentComponent = this;
             const functionalComponent = () => CustomFuntionalComponent({
                 ...attributes,
                 children: this.innerHTML
             });
-
-            currentComponent = this;
-            hookIndex = 0;
+            currentComponent = null;
 
             return functionalComponent();
         }
@@ -28,74 +33,62 @@ export function define({ tag, component: CustomFuntionalComponent }) {
 }
 
 export function useState(initialState) {
-    // Define a unique property name for each state variable
-    const propName = `hook-${hookIndex++}`;
+    const component = currentComponent;
+    const hookIndex = component.hookIndex++;
+    const hookName = `hook-${hookIndex}`;
 
-    currentComponent[propName] = currentComponent[propName] ?? initialState;
-
-    const setState = (newState) => {
-        const currentValue = currentComponent[propName];
-        const newValue = typeof newState === 'function' ? newState(currentValue) : newState;
-
-        currentComponent[propName] = newValue;
-        currentComponent.requestUpdate();
-    };
-
-    return [currentComponent[propName], setState];
-}
-
-export function useEffect(effectCallback, dependencies) {
-    const effectPropName = `hook-${hookIndex++}`;
-
-    // Initialize or update the dependencies property
-    const hasChangedDependencies = currentComponent[effectPropName]
-        ? !dependencies.every((dep, i) => dep === currentComponent[effectPropName].dependencies[i])
-        : true;
-
-    if (hasChangedDependencies) {
-        // Update dependencies
-        currentComponent[effectPropName] = {
-            dependencies,
-            cleanup: undefined, // Placeholder for cleanup function
-        };
-
-
-        // Call the effect callback and store any cleanup function
-        const cleanup = effectCallback();
-        if (typeof cleanup === 'function') {
-            currentComponent[effectPropName].cleanup = cleanup;
-        }
+    if (!component.hooks[hookName]) {
+        component.hooks[hookName] = initialState;
     }
 
-    // Integrate with LitElement lifecycle for cleanup
-    currentComponent.addController({
+    const setState = (newState) => {
+        const value = typeof newState === 'function' ? newState(component.hooks[hookName]) : newState;
+        component.hooks[hookName] = value;
+        component.requestUpdate();
+    };
+
+    return [component.hooks[hookName], setState];
+}
+
+export function useEffect(effect, dependencies) {
+    const component = currentComponent;
+    const hookIndex = component.hookIndex++;
+    const hookName = `hook-${hookIndex}`;
+
+    const prevDeps = component.hooks[hookName]?.dependencies;
+    const hasChanged = !prevDeps || dependencies.some((dep, i) => dep !== prevDeps[i]);
+
+    if (hasChanged) {
+        if (component.hooks[hookName]?.cleanup) {
+            component.hooks[hookName].cleanup();
+        }
+        const cleanup = effect();
+        component.hooks[hookName] = { dependencies, cleanup };
+    }
+
+    component.addController({
         hostDisconnected() {
-            if (currentComponent[effectPropName]?.cleanup) {
-                currentComponent[effectPropName].cleanup();
+            if (component.hooks[hookName]?.cleanup) {
+                component.hooks[hookName].cleanup();
             }
         }
     });
 }
 
 export function useMemo(calculation, dependencies) {
-    const memoPropName = `hook-${hookIndex++}`;
+    const component = currentComponent;
+    const hookIndex = component.hookIndex++;
+    const hookName = `hook-${hookIndex}`;
 
-    // Check if the memoized value and dependencies exist
-    if (!currentComponent[memoPropName]) {
-        currentComponent[memoPropName] = {
-            dependencies: [],
-            value: undefined,
+    const prevDeps = component.hooks[hookName]?.dependencies;
+    const hasChanged = !prevDeps || dependencies.some((dep, i) => dep !== prevDeps[i]);
+
+    if (hasChanged) {
+        component.hooks[hookName] = {
+            value: calculation(),
+            dependencies,
         };
     }
 
-    const hasChangedDependencies = !dependencies
-        .every((dep, index) => dep === currentComponent[memoPropName].dependencies[index]);
-
-    // If dependencies have changed or this is the first run, recalculate the memoized value
-    if (hasChangedDependencies) {
-        currentComponent[memoPropName].value = calculation();
-        currentComponent[memoPropName].dependencies = dependencies;
-    }
-
-    return currentComponent[memoPropName].value;
+    return component.hooks[hookName].value;
 }
