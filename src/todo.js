@@ -2,19 +2,19 @@ import { html, css } from "lit";
 import { define, useState, useEffect, useMemo, useScope, useStyle, lazy, useLazy, useLazyScope } from "./functional-lit";
 
 export const Button = (
-        { children, initialstate = 0 },
-        {
-            useState,
-            useEffect,
-            useMemo,
-            useStyle,
-            html,
-            css,
-        }
-    ) => {
-        const [count, setCount] = useState(parseInt(initialstate));
+    { children, initialstate = 0 },
+    {
+        useState,
+        useEffect,
+        useMemo,
+        useStyle,
+        html,
+        css,
+    }
+) => {
+    const [count, setCount] = useState(parseInt(initialstate));
 
-        useStyle(css`
+    useStyle(css`
             button {
                 background-color: #4CAF50;
                 border: none;
@@ -30,35 +30,33 @@ export const Button = (
             }
         `);
 
-        useEffect(() => {
-            console.log("Button mounted");
-            return () => {
-                console.log("Button unmounted");
-            };
-        }, []);
+    useEffect(() => {
+        console.log("Button mounted");
+        return () => {
+            console.log("Button unmounted");
+        };
+    }, []);
 
-        useEffect(() => {
-            console.log("count effect triggered");
-        }, [count]);
+    useEffect(() => {
+        console.log("count effect triggered");
+    }, [count]);
 
-        const someCalculation = useMemo(() => {
-            const result = count * 2;
-            console.log("memo calculation triggered:", result);
-            return result;
-        }, [count]);
+    const someCalculation = useMemo(() => {
+        const result = count * 2;
+        console.log("memo calculation triggered:", result);
+        return result;
+    }, [count]);
 
-        return html`
+    return html`
         <button @click="${() => setCount(count + 1)}">
             ${children}
             ${count}
             ${someCalculation}
         </button>
     `;
-    }
+}
 
-console.log({ Button: Button.toString() });
 const NewButton = new Function(`return ${Button.toString()}`)();
-
 
 
 const Todo = () => {
@@ -109,9 +107,6 @@ const Todo = () => {
             <button @click="${addTodo}">
                 Add
             </button>
-            <some-button initialState="${2}">some button</some-button>
-            <new-button initialState="${2}">some button</new-button>
-            <lazy-button initialState="${2}">some button</lazy-button>
             <p>
                 Number of todo items: ${numberOfTodoItems}
             </p>
@@ -125,6 +120,9 @@ const Todo = () => {
                     </li>
                 `)}
             </ul>
+            <some-button initialState="${2}">Scoped button</some-button>
+            <new-button initialState="${2}">Button.toString() button</new-button>
+            <lazy-button initialState="${2}">lazy loaded button</lazy-button>
         </div>
     `;
 }

@@ -632,9 +632,6 @@ const Button = ({ children, initialstate = 0 }, { useState, useEffect, useMemo, 
         </button>
     `;
 };
-console.log({
-    Button: Button.toString()
-});
 const NewButton = new Function(`return ${Button.toString()}`)();
 const Todo = ()=>{
     const LazyButton = (0, _functionalLit.useLazyScope)("lazy-button", new Promise((resolve)=>{
@@ -682,9 +679,6 @@ const Todo = ()=>{
             <button @click="${addTodo}">
                 Add
             </button>
-            <some-button initialState="${2}">some button</some-button>
-            <new-button initialState="${2}">some button</new-button>
-            <lazy-button initialState="${2}">some button</lazy-button>
             <p>
                 Number of todo items: ${numberOfTodoItems}
             </p>
@@ -698,6 +692,9 @@ const Todo = ()=>{
                     </li>
                 `)}
             </ul>
+            <some-button initialState="${2}">Scoped button</some-button>
+            <new-button initialState="${2}">Button.toString() button</new-button>
+            <lazy-button initialState="${2}">lazy loaded button</lazy-button>
         </div>
     `;
 };
@@ -1429,11 +1426,7 @@ function define({ tag, component: CustomFunctionalComponent }) {
                 acc[attr.name] = attr.value;
                 return acc;
             }, {});
-            // Call the functional component
-            const result = CustomFunctionalComponent({
-                ...attributes,
-                children: this.innerHTML
-            }, {
+            const sharedDependencies = {
                 useState,
                 useEffect,
                 useMemo,
@@ -1441,7 +1434,12 @@ function define({ tag, component: CustomFunctionalComponent }) {
                 useStyle,
                 html: (0, _lit.html),
                 css: (0, _lit.css)
-            });
+            };
+            // Call the functional component
+            const result = CustomFunctionalComponent({
+                ...attributes,
+                children: this.innerHTML
+            }, sharedDependencies);
             // Clear the current instance context
             setCurrentInstance(null);
             return result;
@@ -1497,31 +1495,17 @@ function useMemo(calculation, dependencies) {
     return component.hooks[hookName].value;
 }
 function useScope(elements) {
-    const component = getCurrentInstance(); // Get the current component instance
-    const scopeId = `scope-${component.hookIndex++}`; // Generate a unique scope ID
-    console.log({
-        scopeId
-    });
-    const scopedElements = {}; // Create a new object to hold scoped elements
     Object.keys(elements).forEach((key)=>{
-        const elementTag = `${key}`;
         const elementClass = elements[key];
         // Define the custom element with a unique tag per component instance
-        if (!customElements.get(elementTag)) define({
-            tag: elementTag,
+        if (!customElements.get(key)) define({
+            tag: key,
             component: elementClass
         });
-        // Store the scoped tag in the new object
-        scopedElements[key] = elementTag;
     });
-    // Store the scoped elements in the component instance
-    component[scopeId] = scopedElements;
-    // Return the scoped elements
-    return component[scopeId];
 }
 function useStyle(styles) {
-    const component = getCurrentInstance(); // Get the current component instance
-    // Store the styles on the component instance to ensure they are only applied once
+    const component = getCurrentInstance();
     if (!component._stylesApplied) {
         component._stylesApplied = true;
         // Apply the styles to the component
@@ -1531,21 +1515,13 @@ function useStyle(styles) {
     }
 }
 const useLazyScope = (tag, promise)=>{
-    const component = getCurrentInstance();
-    const hookIndex = component.hookIndex++;
-    const scopeId = `scope-${hookIndex}`;
     promise.then((module)=>{
-        console.log({
-            module
-        });
-        const elementTag = `${tag}`;
         const elementClass = new Function(`return ${module}`)();
-        if (!customElements.get(elementTag)) define({
-            tag: elementTag,
+        if (!customElements.get(tag)) define({
+            tag,
             component: elementClass
         });
     });
-    return scopeId;
 };
 
 },{"lit":"4antt","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["2zBId","4wXiY"], "4wXiY", "parcelRequire367f")
